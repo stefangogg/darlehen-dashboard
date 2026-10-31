@@ -163,7 +163,7 @@
   </div>
 
   <div class="card" style="margin-bottom:.85rem;">
-    <div class="card-title"><span class="dot dot-blue"></span>Tilgung pro Halbjahr (inkl. Sondertilgungen)</div>
+    <div class="card-title"><span class="dot dot-blue"></span>Tilgung pro Jahr (inkl. Sondertilgungen)</div>
     <div class="chart-wrap h240"><canvas id="chartBar"></canvas></div>
   </div>
 
@@ -346,23 +346,37 @@ new Chart(document.getElementById('chartDonut'),{
   }
 });
 
-// ── CHART 3: Tilgung Bar ──────────────────────────────────────
-const barD=kd.filter(r=>r.tilgung!==null);
+// ── CHART 3: Tilgung Bar (jährlich) ──────────────────────────
+const annualTilgung = [
+  {label:'2021', tilgung:5227.41, sonder:0},
+  {label:'2022', tilgung:5006.33, sonder:0},
+  {label:'2023', tilgung:3044.27, sonder:0},
+  {label:'2024', tilgung:2979.70, sonder:0},
+  {label:'2025', tilgung:3937.15, sonder:10000},
+];
 new Chart(document.getElementById('chartBar'),{
   type:'bar',
   data:{
-    labels:barD.map(r=>r.label),
+    labels:annualTilgung.map(r=>r.label),
     datasets:[
-      {label:'Tilgung',data:barD.map(r=>r.tilgung),backgroundColor:barD.map(r=>r.sonder>0?'#3b82f6':'#93c5fd'),borderRadius:4,stack:'s'},
-      {label:'Sondertilgung',data:barD.map(r=>r.sonder),backgroundColor:'#f59e0b',borderRadius:4,stack:'s'},
+      {label:'Tilgung',data:annualTilgung.map(r=>r.tilgung),backgroundColor:annualTilgung.map(r=>r.sonder>0?'#3b82f6':'#93c5fd'),borderRadius:5,stack:'s'},
+      {label:'Sondertilgung',data:annualTilgung.map(r=>r.sonder),backgroundColor:'#f59e0b',borderRadius:5,stack:'s'},
     ]
   },
   options:{
     responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{labels:{font:{size:11},boxWidth:11}},
-      tooltip:{...tooltipDefaults,callbacks:{label:c=>'  '+c.dataset.label+': '+fmtE(c.raw)}}},
+    plugins:{
+      legend:{labels:{font:{size:11},boxWidth:11}},
+      tooltip:{...tooltipDefaults,callbacks:{
+        label:c=>'  '+c.dataset.label+': '+fmtE(c.raw),
+        afterBody:items=>{
+          const total=items.reduce((s,i)=>s+i.raw,0);
+          return total>0?['  ─────────────','  Gesamt: '+fmtE(total)]:[];
+        }
+      }}
+    },
     scales:{
-      x:{...scaleDefaults.x,stacked:true},
+      x:{...scaleDefaults.x,stacked:true,ticks:{maxRotation:0}},
       y:{...scaleDefaults.y,stacked:true,ticks:{callback:v=>'€'+v.toLocaleString('de-AT'),font:{size:10}}}
     }
   }
