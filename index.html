@@ -181,6 +181,17 @@
     </div>
   </div>
 
+  <!-- ═══ ZINSKOSTEN ═══ -->
+  <div class="section-title">Monatliche Zinskosten (geschätzt)</div>
+
+  <div class="card" style="margin-bottom:.85rem;">
+    <div class="card-title"><span class="dot dot-red"></span>Brutto-Zinskosten vs. Zuschuss (Förderung) vs. Netto-Zinslast</div>
+    <div class="chart-wrap h280"><canvas id="chartZinskosten"></canvas></div>
+    <div class="note">
+      <strong>Hinweis:</strong> Zinskosten = geschätzter Durchschnitts-Reststand × Zinssatz ÷ 12. Der <strong>Zuschuss</strong> (Wohnbauförderung Steiermark) deckt einen Teil der Zinslast ab – die <strong>Netto-Zinslast</strong> ist was faktisch verbleibt. Ab Okt '23 wurde der Zuschuss als temporärer Wohnbonus erhöht.
+    </div>
+  </div>
+
   <!-- ═══ MONATLICHE KOSTEN ═══ -->
   <div class="section-title">Monatliche Gesamtkosten</div>
 
@@ -378,6 +389,76 @@ new Chart(document.getElementById('chartBar'),{
     scales:{
       x:{...scaleDefaults.x,stacked:true,ticks:{maxRotation:0}},
       y:{...scaleDefaults.y,stacked:true,ticks:{callback:v=>'€'+v.toLocaleString('de-AT'),font:{size:10}}}
+    }
+  }
+});
+
+// ── Geschätzte monatliche Zinskosten ─────────────────────────
+// avg. Restkapital × Zinssatz / 12 (Näherungswerte)
+const zinskosten = [
+  {label:"Apr '22", zinsen:143, zuschuss:198.57},
+  {label:"Jul '22", zinsen:141, zuschuss:195.97},
+  {label:"Jan '23", zinsen:593, zuschuss:193.34},
+  {label:"Apr '23", zinsen:591, zuschuss:193.34},
+  {label:"Jul '23", zinsen:743, zuschuss:190.69},
+  {label:"Okt '23", zinsen:742, zuschuss:333.70},
+  {label:"Jan '24", zinsen:737, zuschuss:329.94},
+  {label:"Apr '24", zinsen:735, zuschuss:329.94},
+  {label:"Jul '24", zinsen:697, zuschuss:326.11},
+  {label:"Jan '25", zinsen:555, zuschuss:322.22},
+  {label:"Apr '25", zinsen:553, zuschuss:322.22},
+  {label:"Jun '25", zinsen:552, zuschuss:322.22},
+  {label:"Jul '25", zinsen:429, zuschuss:318.25},
+  {label:"Jan '26", zinsen:416, zuschuss:314.22},
+  {label:"Apr '26", zinsen:413, zuschuss:314.22},
+  {label:"Jul '26", zinsen:471, zuschuss:310.11},
+];
+
+// ── CHART: Zinskosten ─────────────────────────────────────────
+new Chart(document.getElementById('chartZinskosten'),{
+  type:'line',
+  data:{
+    labels:zinskosten.map(r=>r.label),
+    datasets:[
+      {
+        label:'Brutto-Zinskosten',
+        data:zinskosten.map(r=>r.zinsen),
+        borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.12)',
+        borderWidth:2.5,fill:true,stepped:true,pointRadius:4,order:3
+      },
+      {
+        label:'Zuschuss (Förderung)',
+        data:zinskosten.map(r=>r.zuschuss),
+        borderColor:'#059669',backgroundColor:'rgba(5,150,105,.15)',
+        borderWidth:2,fill:true,stepped:true,pointRadius:4,borderDash:[5,4],order:2
+      },
+      {
+        label:'Netto-Zinslast (Brutto − Zuschuss)',
+        data:zinskosten.map(r=>Math.max(0, r.zinsen - r.zuschuss)),
+        borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.10)',
+        borderWidth:2.5,fill:true,stepped:true,pointRadius:5,order:1
+      },
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'bottom',labels:{font:{size:11},boxWidth:11,padding:10}},
+      tooltip:{...tooltipDefaults,callbacks:{
+        label:c=>'  '+c.dataset.label+': '+fmtE(c.raw),
+        afterBody:items=>{
+          if(items.length===3){
+            const z=items[0].raw, s=items[1].raw, n=items[2].raw;
+            const pct=s>0?(s/z*100).toFixed(0):0;
+            return['  ─────────────','  Zuschuss deckt '+pct+' % der Zinslast'];
+          }
+          return[];
+        }
+      }}
+    },
+    scales:{
+      x:scaleDefaults.x,
+      y:{...scaleDefaults.y,min:0,ticks:{callback:v=>'€'+v,font:{size:10}}}
     }
   }
 });
