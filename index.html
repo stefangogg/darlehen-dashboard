@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Darlehen Dashboard – HYPO NÖ</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #3b82f6;
+      --accent: #059669;
+      --amber: #d97706;
+      --danger: #dc2626;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      color: #fff;
+      padding: 1.25rem 1.5rem 1.5rem;
+      position: relative;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
+    header p { font-size: 0.8rem; opacity: 0.75; margin-top: 0.2rem; }
+    .header-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.72rem;
+      margin-top: 0.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* LAYOUT */
+    .container { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 2rem; }
+
+    /* KPI GRID */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    @media(min-width:600px){ .kpi-grid { grid-template-columns: repeat(4,1fr); } }
+
+    .kpi {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1rem 1rem 0.85rem;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .kpi .label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .kpi .value {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-top: 0.3rem;
+      line-height: 1;
+    }
+    .kpi .sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+    .kpi.green .value { color: var(--accent); }
+    .kpi.amber .value { color: var(--amber); }
+    .kpi.blue .value  { color: var(--primary-light); }
+
+    /* CHARTS GRID */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media(min-width:768px){
+      .grid { grid-template-columns: 3fr 2fr; }
+      .full { grid-column: 1 / -1; }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .card-title span {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-blue { background: var(--primary-light); }
+    .dot-green { background: var(--accent); }
+    .dot-amber { background: var(--amber); }
+
+    .chart-wrap { position: relative; }
+    .h260 { height: 260px; }
+    .h320 { height: 320px; }
+    .h220 { height: 220px; }
+
+    /* PROGRESS BAR */
+    .progress-section { margin-top: 0.75rem; }
+    .progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .progress-bar { height: 10px; background: var(--border); border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--accent), #34d399); transition: width 1s ease; }
+
+    /* NOTE */
+    .note {
+      background: #eff6ff;
+      border-left: 3px solid var(--primary-light);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      color: #1e40af;
+      line-height: 1.55;
+    }
+    .note strong { font-weight: 700; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 480px; }
+    thead th {
+      text-align: left;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      background: var(--bg);
+      border-bottom: 2px solid var(--border);
+    }
+    tbody td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f8fafc; }
+    tbody tr.sonder-row td { background: #fffbeb; }
+    tbody tr.sonder-row:hover td { background: #fef3c7; }
+    .tag {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      border-radius: 4px;
+      padding: 0.1rem 0.45rem;
+      font-size: 0.67rem;
+      font-weight: 700;
+      margin-left: 0.3rem;
+      vertical-align: middle;
+      letter-spacing: 0.02em;
+    }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .bold { font-weight: 700; }
+    .green-text { color: var(--accent); font-weight: 700; }
+    .amber-text { color: var(--amber); font-weight: 700; }
+    .muted-text { color: var(--muted); }
+
+    /* PHASE BADGE */
+    .phase-note {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      background: #faf5ff;
+      border: 1px solid #e9d5ff;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      color: #6b21a8;
+    }
+    .phase-note .icon { font-size: 1rem; flex-shrink: 0; }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem 2rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Darlehen Dashboard</h1>
+  <p>HYPO NÖ AG · Darlehenskonto 1356001</p>
+  <div class="header-badge">Stand: 31. Dezember 2025</div>
+</header>
+
+<div class="container">
+
+  <!-- KPI Tiles -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">Ursprüngliches Darlehen</div>
+      <div class="value">€ 178.405</div>
+      <div class="sub">Aufnahme: Juni 2019</div>
+    </div>
+    <div class="kpi blue">
+      <div class="label">Aktueller Reststand</div>
+      <div class="value">€ 148.209</div>
+      <div class="sub">31. Dez. 2025</div>
+    </div>
+    <div class="kpi green">
+      <div class="label">Bereits getilgt</div>
+      <div class="value">€ 30.196</div>
+      <div class="sub">16,9 % des Darlehens</div>
+    </div>
+    <div class="kpi amber">
+      <div class="label">Sondertilgungen</div>
+      <div class="value">€ 10.000</div>
+      <div class="sub">1× Dez. 2025</div>
+    </div>
+  </div>
+
+  <!-- Row 1: Restkapital + Donut -->
+  <div class="grid" style="margin-bottom:1rem">
+
+    <div class="card full">
+      <div class="card-title"><span class="dot-blue"></span>Restkapital-Entwicklung (halbjährlich)</div>
+      <div class="chart-wrap h320">
+        <canvas id="chartLine"></canvas>
+      </div>
+      <!-- Progress bar -->
+      <div class="progress-section">
+        <div class="progress-label">
+          <span>Getilgt: € 30.196</span>
+          <span>16,9 %</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:16.9%"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Row 2: Bar + Donut -->
+  <div class="grid" style="margin-bottom:1rem">
+
+    <div class="card">
+      <div class="card-title"><span class="dot-blue"></span>Tilgung pro Halbjahr</div>
+      <div class="chart-wrap h260">
+        <canvas id="chartBar"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot-green"></span>Getilgt vs. Restschuld</div>
+      <div class="chart-wrap h220" style="margin-bottom:0.5rem">
+        <canvas id="chartDonut"></canvas>
+      </div>
+      <div style="font-size:0.78rem;color:var(--muted);text-align:center;margin-top:0.5rem">
+        Von € 178.405 wurden <strong style="color:var(--accent)">€ 30.196</strong> getilgt.<br>
+        Verbleibend: <strong>€ 148.209</strong>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Phase note -->
+  <div style="margin-bottom:1rem">
+    <div class="phase-note">
+      <div class="icon">ℹ️</div>
+      <div>
+        <strong>Tilgungsfreie Phase 2019–2020:</strong> Der Saldovortrag 2021 entspricht dem ursprünglichen Darlehensbetrag (€ 178.405,07). Zwischen Aufnahme (Juni 2019) und Ende 2020 wurden offenbar nur Zinsen bezahlt – eine tilgungsfreie Anlaufphase. Für diese Periode liegen keine Abrechnungen vor.
+      </div>
+    </div>
+  </div>
+
+  <!-- Hinweis fehlende Daten -->
+  <div style="margin-bottom:1rem">
+    <div class="note">
+      <strong>Nächster Schritt:</strong> Die Kapitaldienstabrechn ungen zeigen nur die Tilgungs-Seite (Kapital). Zinssatz, Zinsanteil und monatliche Aufschlüsselung werden nach dem Import der <strong>monatlichen Vorschreibungen</strong> ergänzt – dann kommen auch ein Zinsverlauf-Chart und die genaue Rate-Aufteilung dazu.
+    </div>
+  </div>
+
+  <!-- Datentabelle -->
+  <div class="card full">
+    <div class="card-title"><span class="dot-blue"></span>Halbjährliche Übersicht – Alle Perioden</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th class="num">Restkapital</th>
+            <th class="num">Tilgung (Periode)</th>
+            <th class="num">Sondertilgung</th>
+            <th class="num">Kum. Tilgung</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>Darlehen-Dashboard · Daten aus HYPO NÖ Kapitaldienstabrechnung 2021–2025 · Alle Angaben ohne Gewähr</footer>
+
+<script>
+// ── Daten ────────────────────────────────────────────────────────────────────
+const rows = [
+  { label:'Jun 2019', restkapital:178405.07, tilgung:null,    sonder:0,      cum:0 },
+  { label:'Jun 2021', restkapital:175797.87, tilgung:2607.20, sonder:0,      cum:2607.20 },
+  { label:'Dez 2021', restkapital:173176.29, tilgung:2620.21, sonder:0,      cum:5227.41 },
+  { label:'Jun 2022', restkapital:170542.98, tilgung:2633.31, sonder:0,      cum:7860.72 },
+  { label:'Dez 2022', restkapital:168169.96, tilgung:2373.02, sonder:0,      cum:10233.74 },
+  { label:'Jun 2023', restkapital:166529.79, tilgung:1640.17, sonder:0,      cum:11873.91 },
+  { label:'Dez 2023', restkapital:165125.69, tilgung:1404.10, sonder:0,      cum:13278.01 },
+  { label:'Jun 2024', restkapital:163683.86, tilgung:1441.83, sonder:0,      cum:14719.84 },
+  { label:'Dez 2024', restkapital:162145.99, tilgung:1537.87, sonder:0,      cum:16257.71 },
+  { label:'Jun 2025', restkapital:160321.06, tilgung:1824.93, sonder:0,      cum:18082.64 },
+  { label:'Dez 2025', restkapital:148208.84, tilgung:2112.22, sonder:10000,  cum:30196.23 },
+];
+
+// ── Formatter ─────────────────────────────────────────────────────────────────
+const eur = v => v.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtEur = v => '€ ' + eur(v);
+
+// ── Chart 1: Restkapital Line ─────────────────────────────────────────────────
+new Chart(document.getElementById('chartLine'), {
+  type:'line',
+  data:{
+    labels: rows.map(r=>r.label),
+    datasets:[{
+      label:'Restkapital',
+      data: rows.map(r=>r.restkapital),
+      borderColor:'#3b82f6',
+      backgroundColor:'rgba(59,130,246,0.07)',
+      borderWidth:2.5,
+      pointBackgroundColor: rows.map(r=> r.sonder>0 ? '#d97706' : '#3b82f6'),
+      pointRadius: rows.map(r=> r.sonder>0 ? 9 : 5),
+      pointHoverRadius:8,
+      fill:true,
+      tension:0.35,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#1e293b',
+        padding:12,
+        cornerRadius:8,
+        callbacks:{
+          title: items => items[0].label,
+          label: ctx => '  Restkapital: ' + fmtEur(ctx.raw),
+          afterLabel: ctx => {
+            const r = rows[ctx.dataIndex];
+            const lines = [];
+            if(r.tilgung) lines.push('  Tilgung: ' + fmtEur(r.tilgung));
+            if(r.sonder)  lines.push('  ⚡ Sondertilgung: ' + fmtEur(r.sonder));
+            if(r.cum)     lines.push('  Kum. Tilgung: ' + fmtEur(r.cum));
+            return lines;
+          }
+        }
+      }
+    },
+    scales:{
+      y:{
+        min:135000, max:185000,
+        ticks:{ callback:v=>'€ '+(v/1000).toFixed(0)+'k', font:{size:11} },
+        grid:{ color:'#f1f5f9' }
+      },
+      x:{
+        ticks:{ font:{size:11} },
+        grid:{ display:false }
+      }
+    }
+  }
+});
+
+// ── Chart 2: Tilgung Bar ──────────────────────────────────────────────────────
+const barRows = rows.filter(r=>r.tilgung!==null);
+new Chart(document.getElementById('chartBar'), {
+  type:'bar',
+  data:{
+    labels: barRows.map(r=>r.label),
+    datasets:[
+      {
+        label:'Tilgung',
+        data: barRows.map(r=>r.tilgung),
+        backgroundColor: barRows.map(r=> r.sonder>0 ? '#3b82f6' : '#93c5fd'),
+        borderRadius:4, stack:'s'
+      },
+      {
+        label:'Sondertilgung',
+        data: barRows.map(r=>r.sonder),
+        backgroundColor:'#f59e0b',
+        borderRadius:4, stack:'s'
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{ labels:{font:{size:11}, boxWidth:12, padding:10} },
+      tooltip:{
+        backgroundColor:'#1e293b', padding:10, cornerRadius:8,
+        callbacks:{ label: ctx => '  '+ctx.dataset.label+': '+fmtEur(ctx.raw) }
+      }
+    },
+    scales:{
+      x:{ stacked:true, ticks:{font:{size:10}, maxRotation:45}, grid:{display:false} },
+      y:{ stacked:true, ticks:{ callback:v=>'€ '+eur(v), font:{size:10} }, grid:{color:'#f1f5f9'} }
+    }
+  }
+});
+
+// ── Chart 3: Donut ───────────────────────────────────────────────────────────
+const getilgt = 178405.07 - 148208.84;
+new Chart(document.getElementById('chartDonut'), {
+  type:'doughnut',
+  data:{
+    labels:['Getilgt','Restschuld'],
+    datasets:[{
+      data:[getilgt, 148208.84],
+      backgroundColor:['#059669','#e2e8f0'],
+      borderWidth:0, hoverOffset:6
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    cutout:'70%',
+    plugins:{
+      legend:{ position:'bottom', labels:{font:{size:12}, boxWidth:12, padding:14} },
+      tooltip:{
+        backgroundColor:'#1e293b', padding:10, cornerRadius:8,
+        callbacks:{ label: ctx => '  '+ctx.label+': '+fmtEur(ctx.raw) }
+      }
+    }
+  }
+});
+
+// ── Tabelle ───────────────────────────────────────────────────────────────────
+const tbody = document.getElementById('tableBody');
+rows.forEach(r => {
+  const tr = document.createElement('tr');
+  if(r.sonder>0) tr.className = 'sonder-row';
+  tr.innerHTML = `
+    <td class="bold">${r.label}${r.sonder>0?'<span class="tag">Sondertilgung</span>':''}</td>
+    <td class="num bold">${fmtEur(r.restkapital)}</td>
+    <td class="num ${r.tilgung?'':'muted-text'}">${r.tilgung ? fmtEur(r.tilgung) : '–'}</td>
+    <td class="num ${r.sonder>0?'amber-text':'muted-text'}">${r.sonder>0 ? fmtEur(r.sonder) : '–'}</td>
+    <td class="num green-text">${r.cum ? fmtEur(r.cum) : '–'}</td>
+  `;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>
