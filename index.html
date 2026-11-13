@@ -125,7 +125,7 @@
       <div class="sub">16,9 %</div>
     </div>
     <div class="kpi red">
-      <div class="lbl">Gesamtkosten (netto)</div>
+      <div class="lbl">Gesamtinvestition</div>
       <div class="val" id="kpiNettoZinsen">–</div>
       <div class="sub" id="kpiZinsenSub">ab Apr. 2022, geschätzt</div>
     </div>
@@ -414,17 +414,19 @@ const zinskosten = [
   {label:"Jul '26", zinsen:471, zuschuss:310.11, monate:4},
 ];
 
-// ── KPI: Gesamtkosten (Netto-Zinsen + Tilgung) ───────────────
+// ── KPI: Gesamtkosten (Anzahlung + Netto-Zinsen + Tilgung) ─────
 {
-  const bruttoGes   = zinskosten.reduce((s,r) => s + r.zinsen   * r.monate, 0);
-  const zuschussGs  = zinskosten.reduce((s,r) => s + r.zuschuss * r.monate, 0);
+  const anzahlung  = 59401.01;  // Eigenkapital bei Kaufabschluss
+  const bruttoGes  = zinskosten.reduce((s,r) => s + r.zinsen   * r.monate, 0);
+  const zuschussGs = zinskosten.reduce((s,r) => s + r.zuschuss * r.monate, 0);
   const nettoZinsen = bruttoGes - zuschussGs;
   const tilgungGes  = kd[kd.length - 1].cum;
-  const gesamt      = nettoZinsen + tilgungGes;
+  const kreditNetto = nettoZinsen + tilgungGes;
+  const gesamt      = anzahlung + kreditNetto;
   const fmtK = v => '€ ' + Math.round(v).toLocaleString('de-AT');
   document.getElementById('kpiNettoZinsen').textContent = fmtK(gesamt);
   document.getElementById('kpiZinsenSub').textContent   =
-    'Zinsen ~' + fmtK(nettoZinsen) + ' + Tilgung ' + fmtK(tilgungGes);
+    'Eigenkapital ' + fmtK(anzahlung) + ' + Kredit ~' + fmtK(kreditNetto);
 }
 
 // ── CHART: Zinskosten ─────────────────────────────────────────
