@@ -124,10 +124,10 @@
       <div class="val">€ 30.196</div>
       <div class="sub">16,9 %</div>
     </div>
-    <div class="kpi amber">
-      <div class="lbl">Sondertilgung</div>
-      <div class="val">€ 10.000</div>
-      <div class="sub">Dez. 2025</div>
+    <div class="kpi red">
+      <div class="lbl">Netto-Zinskosten</div>
+      <div class="val" id="kpiNettoZinsen">–</div>
+      <div class="sub" id="kpiZinsenSub">ab Apr. 2022, geschätzt</div>
     </div>
     <div class="kpi purple">
       <div class="lbl">Akt. Monatsrate</div>
@@ -396,23 +396,34 @@ new Chart(document.getElementById('chartBar'),{
 // ── Geschätzte monatliche Zinskosten ─────────────────────────
 // avg. Restkapital × Zinssatz / 12 (Näherungswerte)
 const zinskosten = [
-  {label:"Apr '22", zinsen:143, zuschuss:198.57},
-  {label:"Jul '22", zinsen:141, zuschuss:195.97},
-  {label:"Jan '23", zinsen:593, zuschuss:193.34},
-  {label:"Apr '23", zinsen:591, zuschuss:193.34},
-  {label:"Jul '23", zinsen:743, zuschuss:190.69},
-  {label:"Okt '23", zinsen:742, zuschuss:333.70},
-  {label:"Jan '24", zinsen:737, zuschuss:329.94},
-  {label:"Apr '24", zinsen:735, zuschuss:329.94},
-  {label:"Jul '24", zinsen:697, zuschuss:326.11},
-  {label:"Jan '25", zinsen:555, zuschuss:322.22},
-  {label:"Apr '25", zinsen:553, zuschuss:322.22},
-  {label:"Jun '25", zinsen:552, zuschuss:322.22},
-  {label:"Jul '25", zinsen:429, zuschuss:318.25},
-  {label:"Jan '26", zinsen:416, zuschuss:314.22},
-  {label:"Apr '26", zinsen:413, zuschuss:314.22},
-  {label:"Jul '26", zinsen:471, zuschuss:310.11},
+  {label:"Apr '22", zinsen:143, zuschuss:198.57, monate:3},
+  {label:"Jul '22", zinsen:141, zuschuss:195.97, monate:6},
+  {label:"Jan '23", zinsen:593, zuschuss:193.34, monate:3},
+  {label:"Apr '23", zinsen:591, zuschuss:193.34, monate:3},
+  {label:"Jul '23", zinsen:743, zuschuss:190.69, monate:3},
+  {label:"Okt '23", zinsen:742, zuschuss:333.70, monate:3},
+  {label:"Jan '24", zinsen:737, zuschuss:329.94, monate:3},
+  {label:"Apr '24", zinsen:735, zuschuss:329.94, monate:3},
+  {label:"Jul '24", zinsen:697, zuschuss:326.11, monate:6},
+  {label:"Jan '25", zinsen:555, zuschuss:322.22, monate:3},
+  {label:"Apr '25", zinsen:553, zuschuss:322.22, monate:2},
+  {label:"Jun '25", zinsen:552, zuschuss:322.22, monate:1},
+  {label:"Jul '25", zinsen:429, zuschuss:318.25, monate:6},
+  {label:"Jan '26", zinsen:416, zuschuss:314.22, monate:3},
+  {label:"Apr '26", zinsen:413, zuschuss:314.22, monate:3},
+  {label:"Jul '26", zinsen:471, zuschuss:310.11, monate:4},
 ];
+
+// ── KPI: Kumulierte Netto-Zinskosten ─────────────────────────
+{
+  const bruttoGes  = zinskosten.reduce((s,r) => s + r.zinsen    * r.monate, 0);
+  const zuschussGs = zinskosten.reduce((s,r) => s + r.zuschuss  * r.monate, 0);
+  const nettoGes   = bruttoGes - zuschussGs;
+  const fmtK = v => '€ ' + Math.round(v).toLocaleString('de-AT');
+  document.getElementById('kpiNettoZinsen').textContent = fmtK(nettoGes);
+  document.getElementById('kpiZinsenSub').textContent   =
+    'Brutto ' + fmtK(bruttoGes) + ' − Förderung ' + fmtK(zuschussGs);
+}
 
 // ── CHART: Zinskosten ─────────────────────────────────────────
 new Chart(document.getElementById('chartZinskosten'),{
