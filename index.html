@@ -5,48 +5,116 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Darlehen Dashboard – HYPO NÖ</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
       --primary:#1e3a8a; --primary-light:#3b82f6; --accent:#059669;
       --amber:#d97706; --red:#dc2626; --purple:#7c3aed; --teal:#0891b2;
       --bg:#f1f5f9; --card:#fff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
-      --shadow:0 1px 4px rgba(0,0,0,0.08);
+      --shadow:0 1px 4px rgba(0,0,0,0.08); --shadow-md:0 4px 12px rgba(0,0,0,0.10);
+      --nav-w:220px;
     }
     *{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
 
-    /* HEADER */
-    header{background:linear-gradient(135deg,#1e3a8a,#1e40af);color:#fff;padding:1.25rem 1.5rem 1.5rem;}
-    header h1{font-size:1.3rem;font-weight:800;letter-spacing:-.01em;}
-    header p{font-size:.8rem;opacity:.75;margin-top:.2rem;}
-    .header-meta{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;}
-    .badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:.2rem .7rem;font-size:.7rem;letter-spacing:.02em;}
+    /* ── SIDEBAR NAV ── */
+    .sidenav{
+      position:fixed;left:0;top:0;bottom:0;width:var(--nav-w);
+      background:#fff;border-right:1px solid var(--border);
+      display:flex;flex-direction:column;z-index:200;
+      transform:translateX(-100%);transition:transform .25s ease;
+      box-shadow:2px 0 12px rgba(0,0,0,.1);
+    }
+    .sidenav.open{transform:translateX(0);}
+    .nav-header{
+      background:linear-gradient(135deg,#1e3a8a,#1e40af);
+      color:#fff;padding:1.1rem 1rem .9rem;
+      font-size:.82rem;font-weight:800;letter-spacing:-.01em;
+      border-bottom:1px solid rgba(255,255,255,.1);
+    }
+    .nav-header small{display:block;font-size:.68rem;font-weight:400;opacity:.7;margin-top:.15rem;}
+    .nav-links{flex:1;padding:.6rem 0;overflow-y:auto;}
+    .nav-links a{
+      display:flex;align-items:center;gap:.6rem;
+      padding:.62rem 1.1rem;font-size:.8rem;font-weight:600;color:var(--muted);
+      text-decoration:none;border-left:3px solid transparent;
+      transition:all .15s;white-space:nowrap;
+    }
+    .nav-links a:hover{color:var(--primary-light);background:#f8fafc;border-left-color:var(--primary-light);}
+    .nav-links a.active{color:var(--primary);background:#eff6ff;border-left-color:var(--primary);}
+    .nav-links .nav-sep{height:1px;background:var(--border);margin:.4rem .8rem;}
+    .nav-icon{font-size:1rem;width:1.2rem;text-align:center;flex-shrink:0;}
+    .nav-footer{padding:.8rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.5rem;}
+    .btn-nav{
+      display:block;width:100%;padding:.6rem .9rem;border-radius:8px;font-size:.78rem;font-weight:700;
+      cursor:pointer;text-align:center;border:none;transition:all .15s;
+    }
+    .btn-new{background:var(--primary);color:#fff;}
+    .btn-new:hover{background:#1e40af;}
+    .btn-export{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+    .btn-export:hover{background:var(--border);}
+    .nav-overlay{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:199;
+    }
+    .nav-overlay.show{display:block;}
 
-    /* LAYOUT */
-    .container{max-width:1100px;margin:0 auto;padding:1.25rem 1rem 2rem;}
+    @media(min-width:1000px){
+      .sidenav{transform:translateX(0);}
+      .nav-overlay{display:none!important;}
+      .hamburger{display:none!important;}
+      .page-wrap{margin-left:var(--nav-w);}
+    }
 
-    /* KPI GRID */
-    .kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;margin-bottom:1.1rem;}
+    /* ── HEADER ── */
+    .page-wrap header{
+      background:linear-gradient(135deg,#1e3a8a,#1e40af);color:#fff;
+      padding:1.1rem 1.5rem 1.4rem;
+    }
+    .header-top{display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem;}
+    .hamburger{
+      background:none;border:none;color:#fff;cursor:pointer;
+      padding:.3rem;border-radius:6px;font-size:1.3rem;line-height:1;
+    }
+    header h1{font-size:1.25rem;font-weight:800;letter-spacing:-.01em;}
+    header p{font-size:.78rem;opacity:.72;margin-top:.15rem;}
+    .header-meta{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem;}
+    .badge{
+      display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+      border-radius:20px;padding:.18rem .65rem;font-size:.68rem;letter-spacing:.02em;
+    }
+
+    /* ── LAYOUT ── */
+    .container{max-width:1080px;margin:0 auto;padding:1.1rem 1rem 2.5rem;}
+
+    /* ── KPI GRID ── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-bottom:1rem;margin-top:.85rem;}
     @media(min-width:480px){.kpi-grid{grid-template-columns:repeat(3,1fr);}}
     @media(min-width:900px){.kpi-grid{grid-template-columns:repeat(6,1fr);}}
-    .kpi{background:var(--card);border-radius:10px;padding:.85rem .9rem;border:1px solid var(--border);box-shadow:var(--shadow);}
-    .kpi .lbl{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
-    .kpi .val{font-size:1.25rem;font-weight:800;margin-top:.25rem;line-height:1;color:var(--text);}
-    .kpi .sub{font-size:.68rem;color:var(--muted);margin-top:.25rem;}
+    .kpi{background:var(--card);border-radius:10px;padding:.8rem .9rem;border:1px solid var(--border);box-shadow:var(--shadow);transition:box-shadow .15s;}
+    .kpi:hover{box-shadow:var(--shadow-md);}
+    .kpi .lbl{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+    .kpi .val{font-size:1.2rem;font-weight:800;margin-top:.2rem;line-height:1;color:var(--text);}
+    .kpi .sub{font-size:.66rem;color:var(--muted);margin-top:.2rem;}
     .kpi.green .val{color:var(--accent);}
     .kpi.amber .val{color:var(--amber);}
     .kpi.blue  .val{color:var(--primary-light);}
     .kpi.red   .val{color:var(--red);}
     .kpi.purple .val{color:var(--purple);}
 
-    /* SECTION TITLES */
-    .section-title{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.4rem 0 .7rem;padding-left:.6rem;border-left:3px solid var(--primary-light);}
+    /* ── SECTION TITLES ── */
+    .section-title{
+      font-size:.67rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--muted);margin:1.4rem 0 .65rem;padding-left:.6rem;
+      border-left:3px solid var(--primary-light);scroll-margin-top:1rem;
+    }
 
-    /* CARDS & GRID */
-    .grid{display:grid;grid-template-columns:1fr;gap:.85rem;}
+    /* ── CARDS ── */
+    .grid{display:grid;grid-template-columns:1fr;gap:.8rem;}
     @media(min-width:700px){.grid-2{grid-template-columns:3fr 2fr;}.grid-eq{grid-template-columns:1fr 1fr;}}
-    .card{background:var(--card);border-radius:10px;padding:1.1rem;border:1px solid var(--border);box-shadow:var(--shadow);}
-    .card-title{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.85rem;display:flex;align-items:center;gap:.35rem;}
+    .card{background:var(--card);border-radius:10px;padding:1rem;border:1px solid var(--border);box-shadow:var(--shadow);transition:box-shadow .15s;}
+    .card:hover{box-shadow:var(--shadow-md);}
+    .card-title{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.8rem;display:flex;align-items:center;gap:.35rem;}
     .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
     .dot-blue{background:var(--primary-light);}
     .dot-green{background:var(--accent);}
@@ -56,230 +124,496 @@
     .dot-teal{background:var(--teal);}
 
     .chart-wrap{position:relative;}
-    .h280{height:280px;}
-    .h240{height:240px;}
-    .h210{height:210px;}
-    .h320{height:320px;}
+    .h280{height:280px;} .h240{height:240px;} .h210{height:210px;} .h320{height:320px;}
 
-    /* PROGRESS */
-    .prog-wrap{margin-top:.75rem;}
-    .prog-lbl{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:.3rem;}
-    .prog-bar{height:8px;background:var(--border);border-radius:8px;overflow:hidden;}
+    /* ── PROGRESS ── */
+    .prog-wrap{margin-top:.7rem;}
+    .prog-lbl{display:flex;justify-content:space-between;font-size:.71rem;color:var(--muted);margin-bottom:.28rem;}
+    .prog-bar{height:7px;background:var(--border);border-radius:8px;overflow:hidden;}
     .prog-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),#34d399);}
 
-    /* TABLES */
+    /* ── TABLES ── */
     .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
     table{width:100%;border-collapse:collapse;font-size:.79rem;min-width:420px;}
-    thead th{text-align:left;padding:.5rem .65rem;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg);border-bottom:2px solid var(--border);}
-    tbody td{padding:.55rem .65rem;border-bottom:1px solid var(--border);}
+    thead th{text-align:left;padding:.48rem .6rem;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg);border-bottom:2px solid var(--border);}
+    tbody td{padding:.5rem .6rem;border-bottom:1px solid var(--border);}
     tbody tr:last-child td{border-bottom:none;}
     tbody tr:hover td{background:#f8fafc;}
     tbody tr.hl td{background:#fffbeb;}
     tbody tr.hl:hover td{background:#fef3c7;}
     .num{text-align:right;font-variant-numeric:tabular-nums;}
-    .bold{font-weight:700;}
-    .green{color:var(--accent);font-weight:700;}
-    .amber{color:var(--amber);font-weight:700;}
-    .red{color:var(--red);font-weight:700;}
+    .bold{font-weight:700;} .green{color:var(--accent);font-weight:700;}
+    .amber{color:var(--amber);font-weight:700;} .red{color:var(--red);font-weight:700;}
     .muted{color:var(--muted);}
-    .tag{display:inline-block;background:#fef3c7;color:#92400e;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;font-weight:700;margin-left:.3rem;vertical-align:middle;}
+    .tag{display:inline-block;background:#fef3c7;color:#92400e;border-radius:4px;padding:.1rem .4rem;font-size:.64rem;font-weight:700;margin-left:.3rem;vertical-align:middle;}
     .tag-red{background:#fee2e2;color:#991b1b;}
     .tag-green{background:#d1fae5;color:#065f46;}
 
-    /* NOTE */
-    .note{background:#eff6ff;border-left:3px solid var(--primary-light);border-radius:8px;padding:.7rem .9rem;font-size:.76rem;color:#1e40af;line-height:1.5;margin-top:.7rem;}
+    /* ── NOTE ── */
+    .note{background:#eff6ff;border-left:3px solid var(--primary-light);border-radius:8px;padding:.65rem .9rem;font-size:.75rem;color:#1e40af;line-height:1.5;margin-top:.65rem;}
     .note strong{font-weight:700;}
 
-    footer{text-align:center;padding:1.5rem 1rem 2.5rem;font-size:.7rem;color:var(--muted);}
+    /* ── DATA PANEL (right drawer) ── */
+    .data-panel{
+      position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100vw;
+      background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,.12);
+      z-index:300;display:flex;flex-direction:column;
+      transform:translateX(100%);transition:transform .28s ease;
+      overflow:hidden;
+    }
+    .data-panel.open{transform:translateX(0);}
+    .panel-overlay{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:299;
+    }
+    .panel-overlay.show{display:block;}
+    .panel-header{
+      background:linear-gradient(135deg,#1e3a8a,#1e40af);color:#fff;
+      padding:1rem 1.1rem;display:flex;align-items:center;justify-content:space-between;
+      flex-shrink:0;
+    }
+    .panel-header h2{font-size:.95rem;font-weight:800;}
+    .panel-close{background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;padding:.2rem;line-height:1;border-radius:4px;}
+    .panel-close:hover{background:rgba(255,255,255,.2);}
+    .panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:#fff;}
+    .tab-btn{
+      flex:1;padding:.65rem .5rem;font-size:.78rem;font-weight:700;border:none;
+      background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;
+      transition:all .15s;
+    }
+    .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+    .panel-body{flex:1;overflow-y:auto;padding:1rem;}
+    .panel-section{margin-bottom:1.1rem;}
+    .panel-section h3{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.5rem;}
+    .field-row{margin-bottom:.6rem;}
+    .field-row label{display:block;font-size:.74rem;font-weight:600;color:var(--text);margin-bottom:.25rem;}
+    .field-row input{
+      width:100%;padding:.45rem .65rem;border:1px solid var(--border);border-radius:7px;
+      font-size:.82rem;font-family:inherit;color:var(--text);background:#fff;
+      transition:border-color .15s;
+    }
+    .field-row input:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 2px rgba(59,130,246,.15);}
+    .field-row input::placeholder{color:var(--muted);}
+    .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+    .upload-zone{
+      border:2px dashed var(--border);border-radius:8px;padding:1rem;text-align:center;
+      cursor:pointer;transition:border-color .15s;margin-bottom:.8rem;
+    }
+    .upload-zone:hover{border-color:var(--primary-light);}
+    .upload-zone input[type=file]{display:none;}
+    .upload-zone .uz-icon{font-size:1.6rem;margin-bottom:.3rem;}
+    .upload-zone .uz-text{font-size:.74rem;color:var(--muted);}
+    .upload-zone .uz-status{font-size:.72rem;color:var(--accent);margin-top:.3rem;font-weight:600;}
+    .btn-save{
+      width:100%;padding:.7rem;background:var(--primary);color:#fff;border:none;
+      border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:.5rem;
+      transition:background .15s;
+    }
+    .btn-save:hover{background:#1e40af;}
+    .btn-danger{
+      width:100%;padding:.6rem;background:#fff;color:var(--red);border:1px solid #fecaca;
+      border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;margin-top:.4rem;
+      transition:all .15s;
+    }
+    .btn-danger:hover{background:#fee2e2;}
+    .stored-list{margin-top:.4rem;}
+    .stored-item{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:.45rem .6rem;background:var(--bg);border-radius:7px;margin-bottom:.35rem;
+      font-size:.75rem;
+    }
+    .stored-item .si-label{font-weight:600;color:var(--text);}
+    .stored-item .si-meta{font-size:.68rem;color:var(--muted);}
+    .btn-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:.9rem;padding:.2rem .4rem;border-radius:4px;}
+    .btn-del:hover{background:#fee2e2;}
+    .export-import-area textarea{
+      width:100%;height:90px;padding:.5rem .65rem;border:1px solid var(--border);
+      border-radius:7px;font-size:.72rem;font-family:monospace;resize:vertical;
+      color:var(--text);
+    }
+    .export-import-area textarea:focus{outline:none;border-color:var(--primary-light);}
+    .btn-row{display:flex;gap:.5rem;margin-top:.5rem;}
+    .btn-sm{
+      flex:1;padding:.5rem .6rem;font-size:.75rem;font-weight:700;border-radius:7px;
+      cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);
+      transition:background .15s;
+    }
+    .btn-sm:hover{background:var(--bg);}
+    .btn-sm.primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+    .btn-sm.primary:hover{background:#1e40af;}
+    .parse-status{font-size:.72rem;padding:.4rem .6rem;border-radius:6px;margin-bottom:.6rem;display:none;}
+    .parse-status.ok{background:#d1fae5;color:#065f46;display:block;}
+    .parse-status.warn{background:#fef3c7;color:#92400e;display:block;}
+    .parse-status.err{background:#fee2e2;color:#991b1b;display:block;}
+
+    footer{text-align:center;padding:1.2rem 1rem 2rem;font-size:.7rem;color:var(--muted);}
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Darlehen Dashboard</h1>
-  <p>Eigentumswohnung · Wiener Straße 95/25 · 8020 Graz</p>
-  <div class="header-meta">
-    <span class="badge">HYPO NÖ AG · Konto 1356001</span>
-    <span class="badge">Aufnahme: Juni 2019</span>
-    <span class="badge">Stand: November 2026</span>
+<!-- ══════════════ SIDEBAR NAV ══════════════ -->
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<nav class="sidenav" id="sidenav">
+  <div class="nav-header">
+    Darlehen Dashboard
+    <small>HYPO NÖ · Konto 1356001</small>
   </div>
-</header>
-
-<div class="container">
-
-  <!-- KPI TILES -->
-  <div class="kpi-grid" style="margin-top:.85rem;">
-    <div class="kpi">
-      <div class="lbl">Urspr. Darlehen</div>
-      <div class="val">€ 178.405</div>
-      <div class="sub">Jun 2019</div>
-    </div>
-    <div class="kpi blue">
-      <div class="lbl">Reststand</div>
-      <div class="val">€ 148.209</div>
-      <div class="sub">31. Dez. 2025</div>
-    </div>
-    <div class="kpi green">
-      <div class="lbl">Getilgt</div>
-      <div class="val">€ 30.196</div>
-      <div class="sub">16,9 %</div>
-    </div>
-    <div class="kpi red">
-      <div class="lbl">Gesamtinvestition</div>
-      <div class="val" id="kpiNettoZinsen">–</div>
-      <div class="sub" id="kpiZinsenSub">ab Apr. 2022, geschätzt</div>
-    </div>
-    <div class="kpi purple">
-      <div class="lbl">Akt. Monatsrate</div>
-      <div class="val">€ 759</div>
-      <div class="sub">ab Jul. 2026</div>
-    </div>
-    <div class="kpi red">
-      <div class="lbl">Akt. Zinssatz</div>
-      <div class="val">3,88 %</div>
-      <div class="sub">ab Jul. 2026</div>
-    </div>
+  <div class="nav-links">
+    <a href="#sec-darlehen" onclick="closeNav()"><span class="nav-icon">📊</span>Darlehen &amp; Tilgung</a>
+    <a href="#sec-zinsen" onclick="closeNav()"><span class="nav-icon">📈</span>Zinssatz &amp; Rate</a>
+    <a href="#sec-zinskosten" onclick="closeNav()"><span class="nav-icon">💸</span>Zinskosten</a>
+    <a href="#sec-kosten" onclick="closeNav()"><span class="nav-icon">🧾</span>Monatliche Kosten</a>
+    <div class="nav-sep"></div>
+    <a href="#sec-tabellen" onclick="closeNav()"><span class="nav-icon">📋</span>Vorschreibungen</a>
+    <a href="#sec-kd" onclick="closeNav()"><span class="nav-icon">📄</span>KD-Abrechnung</a>
   </div>
+  <div class="nav-footer">
+    <button class="btn-nav btn-new" onclick="openPanel(); closeNav();">+ Neue Daten</button>
+    <button class="btn-nav btn-export" onclick="openExportTab(); closeNav();">&#8645; Export / Import</button>
+  </div>
+</nav>
 
-  <!-- ═══ DARLEHEN ═══ -->
-  <div class="section-title">Darlehen & Tilgung</div>
-
-  <div class="grid grid-2" style="margin-bottom:.85rem;">
-    <div class="card">
-      <div class="card-title"><span class="dot dot-blue"></span>Restkapital-Entwicklung</div>
-      <div class="chart-wrap h280"><canvas id="chartLine"></canvas></div>
-      <div class="prog-wrap">
-        <div class="prog-lbl"><span>Getilgt: € 30.196</span><span>16,9 %</span></div>
-        <div class="prog-bar"><div class="prog-fill" style="width:16.9%"></div></div>
+<!-- ══════════════ MAIN WRAP ══════════════ -->
+<div class="page-wrap">
+  <header>
+    <div class="header-top">
+      <button class="hamburger" id="hamburger" onclick="toggleNav()" aria-label="Menü">&#9776;</button>
+      <div>
+        <h1>Darlehen Dashboard</h1>
+        <p>Eigentumswohnung · Wiener Straße 95/25 · 8020 Graz</p>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title"><span class="dot dot-green"></span>Getilgt vs. Restschuld</div>
-      <div class="chart-wrap h210"><canvas id="chartDonut"></canvas></div>
-      <div style="font-size:.75rem;color:var(--muted);text-align:center;margin-top:.5rem;">
-        Noch <strong style="color:var(--primary-light)">€ 148.209</strong> verbleibend von € 178.405
+    <div class="header-meta">
+      <span class="badge">HYPO NÖ AG · Konto 1356001</span>
+      <span class="badge">Aufnahme: Juni 2019</span>
+      <span class="badge">Stand: November 2026</span>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- KPI TILES -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="lbl">Urspr. Darlehen</div>
+        <div class="val">€ 178.405</div>
+        <div class="sub">Jun 2019</div>
+      </div>
+      <div class="kpi blue">
+        <div class="lbl">Reststand</div>
+        <div class="val">€ 148.209</div>
+        <div class="sub">31. Dez. 2025</div>
+      </div>
+      <div class="kpi green">
+        <div class="lbl">Getilgt</div>
+        <div class="val">€ 30.196</div>
+        <div class="sub">16,9 %</div>
+      </div>
+      <div class="kpi red">
+        <div class="lbl">Gesamtinvestition</div>
+        <div class="val" id="kpiNettoZinsen">–</div>
+        <div class="sub" id="kpiZinsenSub">wird berechnet …</div>
+      </div>
+      <div class="kpi purple">
+        <div class="lbl">Akt. Monatsrate</div>
+        <div class="val">€ 759</div>
+        <div class="sub">ab Jul. 2026</div>
+      </div>
+      <div class="kpi" style="--accent-col:var(--red)">
+        <div class="lbl" style="color:var(--muted)">Akt. Zinssatz</div>
+        <div class="val" style="color:var(--red)">3,88 %</div>
+        <div class="sub">ab Jul. 2026</div>
       </div>
     </div>
-  </div>
 
-  <div class="card" style="margin-bottom:.85rem;">
-    <div class="card-title"><span class="dot dot-blue"></span>Tilgung pro Jahr (inkl. Sondertilgungen)</div>
-    <div class="chart-wrap h240"><canvas id="chartBar"></canvas></div>
-  </div>
+    <!-- DARLEHEN -->
+    <div class="section-title" id="sec-darlehen">Darlehen &amp; Tilgung</div>
+    <div class="grid grid-2" style="margin-bottom:.8rem;">
+      <div class="card">
+        <div class="card-title"><span class="dot dot-blue"></span>Restkapital-Entwicklung</div>
+        <div class="chart-wrap h280"><canvas id="chartLine"></canvas></div>
+        <div class="prog-wrap">
+          <div class="prog-lbl"><span>Getilgt: € 30.196</span><span>16,9 %</span></div>
+          <div class="prog-bar"><div class="prog-fill" style="width:16.9%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot dot-green"></span>Getilgt vs. Restschuld</div>
+        <div class="chart-wrap h210"><canvas id="chartDonut"></canvas></div>
+        <div style="font-size:.74rem;color:var(--muted);text-align:center;margin-top:.45rem;">
+          Noch <strong style="color:var(--primary-light)">€ 148.209</strong> verbleibend von € 178.405
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:.8rem;">
+      <div class="card-title"><span class="dot dot-blue"></span>Tilgung pro Jahr (inkl. Sondertilgungen)</div>
+      <div class="chart-wrap h240"><canvas id="chartBar"></canvas></div>
+    </div>
 
-  <!-- ═══ ZINSEN ═══ -->
-  <div class="section-title">Zinssatz & HYPO-Rate</div>
+    <!-- ZINSEN -->
+    <div class="section-title" id="sec-zinsen">Zinssatz &amp; HYPO-Rate</div>
+    <div class="grid grid-eq" style="margin-bottom:.8rem;">
+      <div class="card">
+        <div class="card-title"><span class="dot dot-red"></span>Zinssatz-Verlauf (HYPO NÖ 1356001)</div>
+        <div class="chart-wrap h240"><canvas id="chartZins"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot dot-purple"></span>Brutto-HYPO-Rate &amp; Zuschuss</div>
+        <div class="chart-wrap h240"><canvas id="chartHypo"></canvas></div>
+      </div>
+    </div>
 
-  <div class="grid grid-eq" style="margin-bottom:.85rem;">
+    <!-- ZINSKOSTEN -->
+    <div class="section-title" id="sec-zinskosten">Monatliche Zinskosten (geschätzt)</div>
+    <div class="card" style="margin-bottom:.8rem;">
+      <div class="card-title"><span class="dot dot-red"></span>Brutto-Zinskosten vs. Zuschuss (Förderung) vs. Netto-Zinslast</div>
+      <div class="chart-wrap h280"><canvas id="chartZinskosten"></canvas></div>
+      <div class="note">
+        <strong>Hinweis:</strong> Zinskosten = geschätzter Durchschnitts-Reststand × Zinssatz ÷ 12. Der <strong>Zuschuss</strong> (Wohnbauförderung Steiermark) deckt einen Teil der Zinslast ab – die <strong>Netto-Zinslast</strong> ist was faktisch verbleibt. Ab Okt '23 wurde der Zuschuss als temporärer Wohnbonus erhöht.
+      </div>
+    </div>
+
+    <!-- MONATLICHE KOSTEN -->
+    <div class="section-title" id="sec-kosten">Monatliche Gesamtkosten</div>
+    <div class="card" style="margin-bottom:.8rem;">
+      <div class="card-title"><span class="dot dot-amber"></span>Gesamtvorschreibung monatlich</div>
+      <div class="chart-wrap h280"><canvas id="chartGesamt"></canvas></div>
+      <div class="note">
+        <strong>Hinweis:</strong> Gesamtvorschreibung = HYPO-Rate − Zuschuss + Betriebskosten + Verwaltung + Rücklage + Heizkosten.
+        Der <strong>Zuschuss</strong> ist eine Wohnbauförderung des Landes Steiermark und reduziert die monatliche Vorschreibung direkt.
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:.8rem;">
+      <div class="card-title"><span class="dot dot-teal"></span>Kostenaufteilung monatlich</div>
+      <div class="chart-wrap h280"><canvas id="chartStack"></canvas></div>
+    </div>
+
+    <!-- TABELLEN -->
+    <div class="section-title" id="sec-tabellen">Vorschreibungen im Detail</div>
+    <div class="card" style="margin-bottom:.8rem;">
+      <div class="card-title"><span class="dot dot-blue"></span>Alle Vorschreibungen (chronologisch)</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Gültig ab</th>
+              <th class="num">Zinssatz</th>
+              <th class="num">HYPO brutto</th>
+              <th class="num">Zuschuss</th>
+              <th class="num">Betriebs&shy;kosten</th>
+              <th class="num">Rücklage</th>
+              <th class="num">Heizung</th>
+              <th class="num">Gesamt/Monat</th>
+            </tr>
+          </thead>
+          <tbody id="vsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-title" id="sec-kd">Kapitaldienstabrechnung</div>
     <div class="card">
-      <div class="card-title"><span class="dot dot-red"></span>Zinssatz-Verlauf (HYPO NÖ 1356001)</div>
-      <div class="chart-wrap h240"><canvas id="chartZins"></canvas></div>
+      <div class="card-title"><span class="dot dot-green"></span>Halbjährliche Darlehensentwicklung</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th class="num">Restkapital</th>
+              <th class="num">Tilgung (Periode)</th>
+              <th class="num">Sondertilgung</th>
+              <th class="num">Kum. Tilgung</th>
+            </tr>
+          </thead>
+          <tbody id="kdTable"></tbody>
+        </table>
+      </div>
     </div>
-    <div class="card">
-      <div class="card-title"><span class="dot dot-purple"></span>Brutto-HYPO-Rate &amp; Zuschuss</div>
-      <div class="chart-wrap h240"><canvas id="chartHypo"></canvas></div>
+
+  </div><!-- /container -->
+  <footer>Darlehen-Dashboard · Daten aus HYPO NÖ Kapitaldienstabrechnung 2021–2025 &amp; Vorschreibungen 2022–2026 · Alle Angaben ohne Gewähr</footer>
+</div><!-- /page-wrap -->
+
+<!-- ══════════════ DATA PANEL ══════════════ -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="data-panel" id="dataPanel">
+  <div class="panel-header">
+    <h2>Daten aktualisieren</h2>
+    <button class="panel-close" onclick="closePanel()">&#x2715;</button>
+  </div>
+  <div class="panel-tabs">
+    <button class="tab-btn active" id="tabVS" onclick="showTab('vs')">Vorschreibung</button>
+    <button class="tab-btn" id="tabKD" onclick="showTab('kd')">KD-Abrechnung</button>
+    <button class="tab-btn" id="tabEI" onclick="showTab('ei')">Export / Import</button>
+  </div>
+  <div class="panel-body">
+
+    <!-- TAB: Vorschreibung -->
+    <div id="tabContentVS">
+      <div class="panel-section">
+        <h3>PDF hochladen (optional)</h3>
+        <div class="upload-zone" onclick="document.getElementById('pdfVS').click()">
+          <div class="uz-icon">📄</div>
+          <div class="uz-text">Vorschreibung PDF hier klicken oder ablegen</div>
+          <div class="uz-status" id="pdfVSStatus"></div>
+          <input type="file" id="pdfVS" accept=".pdf" onchange="handlePdfUpload(event,'vs')">
+        </div>
+        <div class="parse-status" id="parseStatusVS"></div>
+      </div>
+      <div class="panel-section">
+        <h3>Felder</h3>
+        <div class="field-row">
+          <label>Gültig ab (z.B. Jan '27)</label>
+          <input type="text" id="vs_label" placeholder="Jan '27">
+        </div>
+        <div class="field-grid">
+          <div class="field-row">
+            <label>Zinssatz (%)</label>
+            <input type="number" id="vs_zinssatz" placeholder="3.88" step="0.001">
+          </div>
+          <div class="field-row">
+            <label>HYPO brutto (€)</label>
+            <input type="number" id="vs_hypo" placeholder="784.54" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Zuschuss (€)</label>
+            <input type="number" id="vs_zuschuss" placeholder="310.11" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Betriebskosten (€)</label>
+            <input type="number" id="vs_bk" placeholder="132.02" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Verwaltungskosten (€)</label>
+            <input type="number" id="vs_vk" placeholder="31.76" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Rücklage (€)</label>
+            <input type="number" id="vs_rl" placeholder="48.33" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Heizkosten (€)</label>
+            <input type="number" id="vs_hk" placeholder="47.07" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Gesamt/Monat (€)</label>
+            <input type="number" id="vs_gesamt" placeholder="759.40" step="0.01">
+          </div>
+        </div>
+        <button class="btn-save" onclick="saveVS()">Speichern &amp; Aktualisieren</button>
+      </div>
+      <div class="panel-section">
+        <h3>Gespeicherte Einträge (localStorage)</h3>
+        <div class="stored-list" id="storedVSList"></div>
+        <button class="btn-danger" onclick="resetAll()">Alle hinzugefügten Daten zurücksetzen</button>
+      </div>
     </div>
-  </div>
 
-  <!-- ═══ ZINSKOSTEN ═══ -->
-  <div class="section-title">Monatliche Zinskosten (geschätzt)</div>
-
-  <div class="card" style="margin-bottom:.85rem;">
-    <div class="card-title"><span class="dot dot-red"></span>Brutto-Zinskosten vs. Zuschuss (Förderung) vs. Netto-Zinslast</div>
-    <div class="chart-wrap h280"><canvas id="chartZinskosten"></canvas></div>
-    <div class="note">
-      <strong>Hinweis:</strong> Zinskosten = geschätzter Durchschnitts-Reststand × Zinssatz ÷ 12. Der <strong>Zuschuss</strong> (Wohnbauförderung Steiermark) deckt einen Teil der Zinslast ab – die <strong>Netto-Zinslast</strong> ist was faktisch verbleibt. Ab Okt '23 wurde der Zuschuss als temporärer Wohnbonus erhöht.
+    <!-- TAB: KD-Abrechnung -->
+    <div id="tabContentKD" style="display:none">
+      <div class="panel-section">
+        <h3>PDF hochladen (optional)</h3>
+        <div class="upload-zone" onclick="document.getElementById('pdfKD').click()">
+          <div class="uz-icon">📄</div>
+          <div class="uz-text">KD-Abrechnung PDF hier klicken oder ablegen</div>
+          <div class="uz-status" id="pdfKDStatus"></div>
+          <input type="file" id="pdfKD" accept=".pdf" onchange="handlePdfUpload(event,'kd')">
+        </div>
+        <div class="parse-status" id="parseStatusKD"></div>
+      </div>
+      <div class="panel-section">
+        <h3>Felder</h3>
+        <div class="field-row">
+          <label>Datum (z.B. Jun 2026)</label>
+          <input type="text" id="kd_label" placeholder="Jun 2026">
+        </div>
+        <div class="field-grid">
+          <div class="field-row">
+            <label>Restkapital (€)</label>
+            <input type="number" id="kd_restkapital" placeholder="145000.00" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Tilgung (€)</label>
+            <input type="number" id="kd_tilgung" placeholder="2200.00" step="0.01">
+          </div>
+          <div class="field-row">
+            <label>Sondertilgung (€)</label>
+            <input type="number" id="kd_sonder" placeholder="0" step="0.01">
+          </div>
+        </div>
+        <button class="btn-save" onclick="saveKD()">Speichern &amp; Aktualisieren</button>
+      </div>
+      <div class="panel-section">
+        <h3>Gespeicherte Einträge (localStorage)</h3>
+        <div class="stored-list" id="storedKDList"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- ═══ MONATLICHE KOSTEN ═══ -->
-  <div class="section-title">Monatliche Gesamtkosten</div>
-
-  <div class="card" style="margin-bottom:.85rem;">
-    <div class="card-title"><span class="dot dot-amber"></span>Gesamtvorschreibung monatlich</div>
-    <div class="chart-wrap h280"><canvas id="chartGesamt"></canvas></div>
-    <div class="note">
-      <strong>Hinweis:</strong> Gesamtvorschreibung = HYPO-Rate − Zuschuss + Betriebskosten + Verwaltung + Rücklage + Heizkosten.
-      Der <strong>Zuschuss</strong> ist eine Wohnbauförderung des Landes Steiermark und reduziert die monatliche Vorschreibung direkt.
+    <!-- TAB: Export / Import -->
+    <div id="tabContentEI" style="display:none">
+      <div class="panel-section">
+        <h3>Daten exportieren</h3>
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">Kopiere diesen JSON und speichere ihn, um Daten auf einem anderen Gerät einzuspielen.</p>
+        <div class="export-import-area">
+          <textarea id="exportArea" readonly placeholder="(keine gespeicherten Daten)"></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn-sm primary" onclick="doExport()">Exportieren</button>
+          <button class="btn-sm" onclick="copyExport()">Kopieren</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h3>Daten importieren</h3>
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">JSON einfügen und importieren. Bestehende gespeicherte Daten werden zusammengeführt.</p>
+        <div class="export-import-area">
+          <textarea id="importArea" placeholder='{"vs":[...],"kd":[]}'></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn-sm primary" onclick="doImport()">Importieren &amp; Laden</button>
+        </div>
+        <div class="parse-status" id="importStatus"></div>
+      </div>
+      <div class="panel-section">
+        <button class="btn-danger" onclick="resetAll()">Alle gespeicherten Daten löschen</button>
+      </div>
     </div>
-  </div>
 
-  <div class="card" style="margin-bottom:.85rem;">
-    <div class="card-title"><span class="dot dot-teal"></span>Kostenaufteilung monatlich</div>
-    <div class="chart-wrap h280"><canvas id="chartStack"></canvas></div>
-  </div>
-
-  <!-- ═══ TABELLEN ═══ -->
-  <div class="section-title">Vorschreibungen im Detail</div>
-
-  <div class="card" style="margin-bottom:.85rem;">
-    <div class="card-title"><span class="dot dot-blue"></span>Alle Vorschreibungen (chronologisch)</div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Gültig ab</th>
-            <th class="num">Zinssatz</th>
-            <th class="num">HYPO brutto</th>
-            <th class="num">Zuschuss</th>
-            <th class="num">Betriebs&shy;kosten</th>
-            <th class="num">Rücklage</th>
-            <th class="num">Heizung</th>
-            <th class="num">Gesamt/Monat</th>
-          </tr>
-        </thead>
-        <tbody id="vsTable"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="section-title">Kapitaldienstabrechnung</div>
-
-  <div class="card">
-    <div class="card-title"><span class="dot dot-green"></span>Halbjährliche Darlehensentwicklung</div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Datum</th>
-            <th class="num">Restkapital</th>
-            <th class="num">Tilgung (Periode)</th>
-            <th class="num">Sondertilgung</th>
-            <th class="num">Kum. Tilgung</th>
-          </tr>
-        </thead>
-        <tbody id="kdTable"></tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-
-<footer>Darlehen-Dashboard · Daten aus HYPO NÖ Kapitaldienstabrechnung 2021–2025 &amp; Vorschreibungen 2022–2026 · Alle Angaben ohne Gewähr</footer>
+  </div><!-- /panel-body -->
+</div><!-- /data-panel -->
 
 <script>
-// ── Formatter ─────────────────────────────────────────────────
-const fmt = v => v.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtE = v => '€ '+fmt(v);
-const fmtP = v => v.toFixed(3).replace('.',',') + ' %';
+// ══════════════════════════════════════════
+//  PDF.js worker
+// ══════════════════════════════════════════
+if(typeof pdfjsLib !== 'undefined'){
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
-// ── Darlehen (Kapitaldienstabrechnung) ───────────────────────
-const kd = [
-  {label:'Jun 2019', restkapital:178405.07, tilgung:null,    sonder:0,      cum:0},
-  {label:'Jun 2021', restkapital:175797.87, tilgung:2607.20, sonder:0,      cum:2607.20},
-  {label:'Dez 2021', restkapital:173176.29, tilgung:2620.21, sonder:0,      cum:5227.41},
-  {label:'Jun 2022', restkapital:170542.98, tilgung:2633.31, sonder:0,      cum:7860.72},
-  {label:'Dez 2022', restkapital:168169.96, tilgung:2373.02, sonder:0,      cum:10233.74},
-  {label:'Jun 2023', restkapital:166529.79, tilgung:1640.17, sonder:0,      cum:11873.91},
-  {label:'Dez 2023', restkapital:165125.69, tilgung:1404.10, sonder:0,      cum:13278.01},
-  {label:'Jun 2024', restkapital:163683.86, tilgung:1441.83, sonder:0,      cum:14719.84},
-  {label:'Dez 2024', restkapital:162145.99, tilgung:1537.87, sonder:0,      cum:16257.71},
-  {label:'Jun 2025', restkapital:160321.06, tilgung:1824.93, sonder:0,      cum:18082.64},
-  {label:'Dez 2025', restkapital:148208.84, tilgung:2112.22, sonder:10000,  cum:30196.23},
+// ══════════════════════════════════════════
+//  Formatters
+// ══════════════════════════════════════════
+const fmt  = v => v.toLocaleString('de-AT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtE = v => '€ '+fmt(v);
+const fmtK = v => '€ '+Math.round(v).toLocaleString('de-AT');
+
+// ══════════════════════════════════════════
+//  BASE DATA
+// ══════════════════════════════════════════
+const kd_base = [
+  {label:'Jun 2019', restkapital:178405.07, tilgung:null,    sonder:0,     cum:0},
+  {label:'Jun 2021', restkapital:175797.87, tilgung:2607.20, sonder:0,     cum:2607.20},
+  {label:'Dez 2021', restkapital:173176.29, tilgung:2620.21, sonder:0,     cum:5227.41},
+  {label:'Jun 2022', restkapital:170542.98, tilgung:2633.31, sonder:0,     cum:7860.72},
+  {label:'Dez 2022', restkapital:168169.96, tilgung:2373.02, sonder:0,     cum:10233.74},
+  {label:'Jun 2023', restkapital:166529.79, tilgung:1640.17, sonder:0,     cum:11873.91},
+  {label:'Dez 2023', restkapital:165125.69, tilgung:1404.10, sonder:0,     cum:13278.01},
+  {label:'Jun 2024', restkapital:163683.86, tilgung:1441.83, sonder:0,     cum:14719.84},
+  {label:'Dez 2024', restkapital:162145.99, tilgung:1537.87, sonder:0,     cum:16257.71},
+  {label:'Jun 2025', restkapital:160321.06, tilgung:1824.93, sonder:0,     cum:18082.64},
+  {label:'Dez 2025', restkapital:148208.84, tilgung:2112.22, sonder:10000, cum:30196.23},
 ];
 
-// ── Vorschreibungen ───────────────────────────────────────────
-const vs = [
+const vs_base = [
   {label:"Apr '22", zinssatz:1.000, hypo:583.20, zuschuss:198.57, bk:85.47,  vk:25.46, rl:10.51, hk:68.08,  gesamt:598.86},
   {label:"Jul '22", zinssatz:1.000, hypo:583.20, zuschuss:195.97, bk:85.47,  vk:25.46, rl:10.51, hk:68.08,  gesamt:601.46},
   {label:"Jan '23", zinssatz:4.250, hypo:868.96, zuschuss:193.34, bk:85.47,  vk:25.46, rl:10.51, hk:68.08,  gesamt:889.85},
@@ -298,14 +632,78 @@ const vs = [
   {label:"Jul '26", zinssatz:3.880, hypo:784.54, zuschuss:310.11, bk:132.02, vk:31.76, rl:48.33, hk:47.07,  gesamt:759.40},
 ];
 
-// ── Tooltip defaults ──────────────────────────────────────────
+const zinskosten_base = [
+  {label:"Apr '22", zinsen:143, zuschuss:198.57, monate:3},
+  {label:"Jul '22", zinsen:141, zuschuss:195.97, monate:6},
+  {label:"Jan '23", zinsen:593, zuschuss:193.34, monate:3},
+  {label:"Apr '23", zinsen:591, zuschuss:193.34, monate:3},
+  {label:"Jul '23", zinsen:743, zuschuss:190.69, monate:3},
+  {label:"Okt '23", zinsen:742, zuschuss:333.70, monate:3},
+  {label:"Jan '24", zinsen:737, zuschuss:329.94, monate:3},
+  {label:"Apr '24", zinsen:735, zuschuss:329.94, monate:3},
+  {label:"Jul '24", zinsen:697, zuschuss:326.11, monate:6},
+  {label:"Jan '25", zinsen:555, zuschuss:322.22, monate:3},
+  {label:"Apr '25", zinsen:553, zuschuss:322.22, monate:2},
+  {label:"Jun '25", zinsen:552, zuschuss:322.22, monate:1},
+  {label:"Jul '25", zinsen:429, zuschuss:318.25, monate:6},
+  {label:"Jan '26", zinsen:416, zuschuss:314.22, monate:3},
+  {label:"Apr '26", zinsen:413, zuschuss:314.22, monate:3},
+  {label:"Jul '26", zinsen:471, zuschuss:310.11, monate:4},
+];
+
+const annualTilgung_base = [
+  {label:'2021', tilgung:5227.41, sonder:0},
+  {label:'2022', tilgung:5006.33, sonder:0},
+  {label:'2023', tilgung:3044.27, sonder:0},
+  {label:'2024', tilgung:2979.70, sonder:0},
+  {label:'2025', tilgung:3937.15, sonder:10000},
+];
+
+// ══════════════════════════════════════════
+//  localStorage merge
+// ══════════════════════════════════════════
+function loadStored(){ return JSON.parse(localStorage.getItem('darlehen_v1')||'{"vs":[],"kd":[]}'); }
+function saveStored(d){ localStorage.setItem('darlehen_v1', JSON.stringify(d)); }
+
+const stored = loadStored();
+const vs  = [...vs_base,  ...stored.vs];
+const kd  = [...kd_base,  ...stored.kd.map((r,i)=>{
+  // recalculate cum on top of last base entry
+  const baseCum = kd_base[kd_base.length-1].cum;
+  // sum all previous stored kd entries
+  let prevCum = stored.kd.slice(0,i).reduce((s,x)=>(s+(x.tilgung||0)+(x.sonder||0)),0);
+  r.cum = baseCum + prevCum + (r.tilgung||0) + (r.sonder||0);
+  return r;
+})];
+
+// ══════════════════════════════════════════
+//  KPI: Gesamtinvestition
+// ══════════════════════════════════════════
+{
+  const anzahlung   = 59401.01;
+  const bruttoGes   = zinskosten_base.reduce((s,r)=>s+r.zinsen*r.monate,0);
+  const zuschussGs  = zinskosten_base.reduce((s,r)=>s+r.zuschuss*r.monate,0);
+  const nettoZinsen = bruttoGes - zuschussGs;
+  const tilgungGes  = kd[kd.length-1].cum;
+  const kreditNetto = nettoZinsen + tilgungGes;
+  const gesamt      = anzahlung + kreditNetto;
+  document.getElementById('kpiNettoZinsen').textContent = fmtK(gesamt);
+  document.getElementById('kpiZinsenSub').textContent   =
+    'Eigenkapital '+fmtK(anzahlung)+' + Kredit ~'+fmtK(kreditNetto);
+}
+
+// ══════════════════════════════════════════
+//  Chart defaults
+// ══════════════════════════════════════════
 const tooltipDefaults = {backgroundColor:'#1e293b',padding:10,cornerRadius:8,titleFont:{size:12},bodyFont:{size:12}};
 const scaleDefaults = {
   x:{ticks:{font:{size:10},maxRotation:45},grid:{display:false}},
   y:{ticks:{font:{size:10}},grid:{color:'#f1f5f9'}}
 };
 
-// ── CHART 1: Restkapital Line ─────────────────────────────────
+// ══════════════════════════════════════════
+//  CHART 1: Restkapital
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartLine'),{
   type:'line',
   data:{
@@ -341,7 +739,9 @@ new Chart(document.getElementById('chartLine'),{
   }
 });
 
-// ── CHART 2: Donut ────────────────────────────────────────────
+// ══════════════════════════════════════════
+//  CHART 2: Donut
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartDonut'),{
   type:'doughnut',
   data:{
@@ -357,21 +757,16 @@ new Chart(document.getElementById('chartDonut'),{
   }
 });
 
-// ── CHART 3: Tilgung Bar (jährlich) ──────────────────────────
-const annualTilgung = [
-  {label:'2021', tilgung:5227.41, sonder:0},
-  {label:'2022', tilgung:5006.33, sonder:0},
-  {label:'2023', tilgung:3044.27, sonder:0},
-  {label:'2024', tilgung:2979.70, sonder:0},
-  {label:'2025', tilgung:3937.15, sonder:10000},
-];
+// ══════════════════════════════════════════
+//  CHART 3: Tilgung Bar
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartBar'),{
   type:'bar',
   data:{
-    labels:annualTilgung.map(r=>r.label),
+    labels:annualTilgung_base.map(r=>r.label),
     datasets:[
-      {label:'Tilgung',data:annualTilgung.map(r=>r.tilgung),backgroundColor:annualTilgung.map(r=>r.sonder>0?'#3b82f6':'#93c5fd'),borderRadius:5,stack:'s'},
-      {label:'Sondertilgung',data:annualTilgung.map(r=>r.sonder),backgroundColor:'#f59e0b',borderRadius:5,stack:'s'},
+      {label:'Tilgung',data:annualTilgung_base.map(r=>r.tilgung),backgroundColor:annualTilgung_base.map(r=>r.sonder>0?'#3b82f6':'#93c5fd'),borderRadius:5,stack:'s'},
+      {label:'Sondertilgung',data:annualTilgung_base.map(r=>r.sonder),backgroundColor:'#f59e0b',borderRadius:5,stack:'s'},
     ]
   },
   options:{
@@ -393,66 +788,24 @@ new Chart(document.getElementById('chartBar'),{
   }
 });
 
-// ── Geschätzte monatliche Zinskosten ─────────────────────────
-// avg. Restkapital × Zinssatz / 12 (Näherungswerte)
-const zinskosten = [
-  {label:"Apr '22", zinsen:143, zuschuss:198.57, monate:3},
-  {label:"Jul '22", zinsen:141, zuschuss:195.97, monate:6},
-  {label:"Jan '23", zinsen:593, zuschuss:193.34, monate:3},
-  {label:"Apr '23", zinsen:591, zuschuss:193.34, monate:3},
-  {label:"Jul '23", zinsen:743, zuschuss:190.69, monate:3},
-  {label:"Okt '23", zinsen:742, zuschuss:333.70, monate:3},
-  {label:"Jan '24", zinsen:737, zuschuss:329.94, monate:3},
-  {label:"Apr '24", zinsen:735, zuschuss:329.94, monate:3},
-  {label:"Jul '24", zinsen:697, zuschuss:326.11, monate:6},
-  {label:"Jan '25", zinsen:555, zuschuss:322.22, monate:3},
-  {label:"Apr '25", zinsen:553, zuschuss:322.22, monate:2},
-  {label:"Jun '25", zinsen:552, zuschuss:322.22, monate:1},
-  {label:"Jul '25", zinsen:429, zuschuss:318.25, monate:6},
-  {label:"Jan '26", zinsen:416, zuschuss:314.22, monate:3},
-  {label:"Apr '26", zinsen:413, zuschuss:314.22, monate:3},
-  {label:"Jul '26", zinsen:471, zuschuss:310.11, monate:4},
-];
-
-// ── KPI: Gesamtkosten (Anzahlung + Netto-Zinsen + Tilgung) ─────
-{
-  const anzahlung  = 59401.01;  // Eigenkapital bei Kaufabschluss
-  const bruttoGes  = zinskosten.reduce((s,r) => s + r.zinsen   * r.monate, 0);
-  const zuschussGs = zinskosten.reduce((s,r) => s + r.zuschuss * r.monate, 0);
-  const nettoZinsen = bruttoGes - zuschussGs;
-  const tilgungGes  = kd[kd.length - 1].cum;
-  const kreditNetto = nettoZinsen + tilgungGes;
-  const gesamt      = anzahlung + kreditNetto;
-  const fmtK = v => '€ ' + Math.round(v).toLocaleString('de-AT');
-  document.getElementById('kpiNettoZinsen').textContent = fmtK(gesamt);
-  document.getElementById('kpiZinsenSub').textContent   =
-    'Eigenkapital ' + fmtK(anzahlung) + ' + Kredit ~' + fmtK(kreditNetto);
-}
-
-// ── CHART: Zinskosten ─────────────────────────────────────────
+// ══════════════════════════════════════════
+//  CHART: Zinskosten
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartZinskosten'),{
   type:'line',
   data:{
-    labels:zinskosten.map(r=>r.label),
+    labels:zinskosten_base.map(r=>r.label),
     datasets:[
-      {
-        label:'Brutto-Zinskosten',
-        data:zinskosten.map(r=>r.zinsen),
-        borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.12)',
-        borderWidth:2.5,fill:true,stepped:true,pointRadius:4,order:3
-      },
-      {
-        label:'Zuschuss (Förderung)',
-        data:zinskosten.map(r=>r.zuschuss),
-        borderColor:'#059669',backgroundColor:'rgba(5,150,105,.15)',
-        borderWidth:2,fill:true,stepped:true,pointRadius:4,borderDash:[5,4],order:2
-      },
-      {
-        label:'Netto-Zinslast (Brutto − Zuschuss)',
-        data:zinskosten.map(r=>Math.max(0, r.zinsen - r.zuschuss)),
-        borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.10)',
-        borderWidth:2.5,fill:true,stepped:true,pointRadius:5,order:1
-      },
+      {label:'Brutto-Zinskosten',data:zinskosten_base.map(r=>r.zinsen),
+       borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.12)',
+       borderWidth:2.5,fill:true,stepped:true,pointRadius:4,order:3},
+      {label:'Zuschuss (Förderung)',data:zinskosten_base.map(r=>r.zuschuss),
+       borderColor:'#059669',backgroundColor:'rgba(5,150,105,.15)',
+       borderWidth:2,fill:true,stepped:true,pointRadius:4,borderDash:[5,4],order:2},
+      {label:'Netto-Zinslast (Brutto − Zuschuss)',
+       data:zinskosten_base.map(r=>Math.max(0,r.zinsen-r.zuschuss)),
+       borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.10)',
+       borderWidth:2.5,fill:true,stepped:true,pointRadius:5,order:1},
     ]
   },
   options:{
@@ -463,22 +816,21 @@ new Chart(document.getElementById('chartZinskosten'),{
         label:c=>'  '+c.dataset.label+': '+fmtE(c.raw),
         afterBody:items=>{
           if(items.length===3){
-            const z=items[0].raw, s=items[1].raw, n=items[2].raw;
+            const z=items[0].raw,s=items[1].raw;
             const pct=s>0?(s/z*100).toFixed(0):0;
-            return['  ─────────────','  Zuschuss deckt '+pct+' % der Zinslast'];
+            return['─────────────','  Zuschuss deckt '+pct+' % der Zinslast'];
           }
           return[];
         }
       }}
     },
-    scales:{
-      x:scaleDefaults.x,
-      y:{...scaleDefaults.y,min:0,ticks:{callback:v=>'€'+v,font:{size:10}}}
-    }
+    scales:{x:scaleDefaults.x,y:{...scaleDefaults.y,min:0,ticks:{callback:v=>'€'+v,font:{size:10}}}}
   }
 });
 
-// ── CHART 4: Zinssatz ─────────────────────────────────────────
+// ══════════════════════════════════════════
+//  CHART 4: Zinssatz
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartZins'),{
   type:'line',
   data:{
@@ -506,7 +858,9 @@ new Chart(document.getElementById('chartZins'),{
   }
 });
 
-// ── CHART 5: HYPO brutto & Zuschuss ──────────────────────────
+// ══════════════════════════════════════════
+//  CHART 5: HYPO & Zuschuss
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartHypo'),{
   type:'line',
   data:{
@@ -522,14 +876,13 @@ new Chart(document.getElementById('chartHypo'),{
       legend:{labels:{font:{size:11},boxWidth:11}},
       tooltip:{...tooltipDefaults,callbacks:{label:c=>'  '+c.dataset.label+': '+fmtE(c.raw)}}
     },
-    scales:{
-      x:scaleDefaults.x,
-      y:{...scaleDefaults.y,min:0,ticks:{callback:v=>'€'+v,font:{size:10}}}
-    }
+    scales:{x:scaleDefaults.x,y:{...scaleDefaults.y,min:0,ticks:{callback:v=>'€'+v,font:{size:10}}}}
   }
 });
 
-// ── CHART 6: Gesamtvorschreibung ──────────────────────────────
+// ══════════════════════════════════════════
+//  CHART 6: Gesamtvorschreibung
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartGesamt'),{
   type:'line',
   data:{
@@ -555,24 +908,23 @@ new Chart(document.getElementById('chartGesamt'),{
         }
       }}
     },
-    scales:{
-      x:scaleDefaults.x,
-      y:{...scaleDefaults.y,min:500,ticks:{callback:v=>'€'+v,font:{size:10}}}
-    }
+    scales:{x:scaleDefaults.x,y:{...scaleDefaults.y,min:500,ticks:{callback:v=>'€'+v,font:{size:10}}}}
   }
 });
 
-// ── CHART 7: Kostenaufteilung Stacked Bar ─────────────────────
+// ══════════════════════════════════════════
+//  CHART 7: Stacked Bar Kosten
+// ══════════════════════════════════════════
 new Chart(document.getElementById('chartStack'),{
   type:'bar',
   data:{
     labels:vs.map(r=>r.label),
     datasets:[
-      {label:'HYPO netto (nach Zuschuss)',data:vs.map(r=>+(r.hypo-r.zuschuss).toFixed(2)),backgroundColor:'#3b82f6',borderRadius:2,stack:'k'},
-      {label:'Betriebskosten',           data:vs.map(r=>r.bk),backgroundColor:'#0891b2',borderRadius:2,stack:'k'},
-      {label:'Verwaltungskosten',        data:vs.map(r=>r.vk),backgroundColor:'#059669',borderRadius:2,stack:'k'},
-      {label:'Rücklage (§31 WEG)',       data:vs.map(r=>r.rl),backgroundColor:'#7c3aed',borderRadius:2,stack:'k'},
-      {label:'Heizkosten',               data:vs.map(r=>r.hk),backgroundColor:'#ea580c',borderRadius:2,stack:'k'},
+      {label:'HYPO netto (nach Zuschuss)', data:vs.map(r=>+(r.hypo-r.zuschuss).toFixed(2)),backgroundColor:'#3b82f6',borderRadius:2,stack:'k'},
+      {label:'Betriebskosten',             data:vs.map(r=>r.bk),backgroundColor:'#0891b2',borderRadius:2,stack:'k'},
+      {label:'Verwaltungskosten',          data:vs.map(r=>r.vk),backgroundColor:'#059669',borderRadius:2,stack:'k'},
+      {label:'Rücklage (§31 WEG)',data:vs.map(r=>r.rl),backgroundColor:'#7c3aed',borderRadius:2,stack:'k'},
+      {label:'Heizkosten',                 data:vs.map(r=>r.hk),backgroundColor:'#ea580c',borderRadius:2,stack:'k'},
     ]
   },
   options:{
@@ -583,7 +935,7 @@ new Chart(document.getElementById('chartStack'),{
         label:c=>'  '+c.dataset.label+': '+fmtE(c.raw),
         afterBody:items=>{
           const total=items.reduce((s,i)=>s+i.raw,0);
-          return['  ─────────────','  Gesamt: '+fmtE(total)];
+          return['─────────────','  Gesamt: '+fmtE(total)];
         }
       }}
     },
@@ -594,7 +946,9 @@ new Chart(document.getElementById('chartStack'),{
   }
 });
 
-// ── Vorschreibungen Tabelle ───────────────────────────────────
+// ══════════════════════════════════════════
+//  Tabellen
+// ══════════════════════════════════════════
 const vsTable=document.getElementById('vsTable');
 const maxZ=Math.max(...vs.map(v=>v.zinssatz));
 const maxG=Math.max(...vs.map(v=>v.gesamt));
@@ -603,7 +957,7 @@ vs.forEach(r=>{
   const isMax=r.zinssatz===maxZ||r.gesamt===maxG;
   if(isMax)tr.className='hl';
   tr.innerHTML=`
-    <td class="bold">${r.label}${r.gesamt===maxG?'<span class="tag">Peak</span>':''}${r.zinssatz===maxZ&&r.gesamt!==maxG?'<span class="tag tag-red">Peak-Zins</span>':''}</td>
+    <td class="bold">${r.label}${r.gesamt===maxG?'<span class="tag">Peak</span>':''}${r.zinssatz===maxZ&&r.gesamt!==maxG?'<span class="tag tag-red">Peak-Zins</span>':''}${r._stored?'<span class="tag tag-green">neu</span>':''}</td>
     <td class="num ${r.zinssatz>=5?'red':r.zinssatz>=4?'amber':'green'}">${r.zinssatz.toFixed(3).replace('.',',')} %</td>
     <td class="num">${fmtE(r.hypo)}</td>
     <td class="num green">− ${fmtE(r.zuschuss)}</td>
@@ -615,13 +969,12 @@ vs.forEach(r=>{
   vsTable.appendChild(tr);
 });
 
-// ── Kapitaldienstabrechnung Tabelle ──────────────────────────
 const kdTable=document.getElementById('kdTable');
 kd.forEach(r=>{
   const tr=document.createElement('tr');
   if(r.sonder>0)tr.className='hl';
   tr.innerHTML=`
-    <td class="bold">${r.label}${r.sonder>0?'<span class="tag">Sondertilgung</span>':''}</td>
+    <td class="bold">${r.label}${r.sonder>0?'<span class="tag">Sondertilgung</span>':''}${r._stored?'<span class="tag tag-green">neu</span>':''}</td>
     <td class="num bold">${fmtE(r.restkapital)}</td>
     <td class="num">${r.tilgung?fmtE(r.tilgung):'<span class="muted">–</span>'}</td>
     <td class="num ${r.sonder>0?'amber':'muted'}">${r.sonder>0?fmtE(r.sonder):'–'}</td>
@@ -629,6 +982,259 @@ kd.forEach(r=>{
   `;
   kdTable.appendChild(tr);
 });
+
+// ══════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════
+function toggleNav(){
+  document.getElementById('sidenav').classList.toggle('open');
+  document.getElementById('navOverlay').classList.toggle('show');
+}
+function closeNav(){
+  document.getElementById('sidenav').classList.remove('open');
+  document.getElementById('navOverlay').classList.remove('show');
+}
+
+// ══════════════════════════════════════════
+//  DATA PANEL
+// ══════════════════════════════════════════
+function openPanel(){
+  document.getElementById('dataPanel').classList.add('open');
+  document.getElementById('panelOverlay').classList.add('show');
+  renderStoredLists();
+}
+function closePanel(){
+  document.getElementById('dataPanel').classList.remove('open');
+  document.getElementById('panelOverlay').classList.remove('show');
+}
+function openExportTab(){
+  openPanel();
+  showTab('ei');
+}
+function showTab(t){
+  ['vs','kd','ei'].forEach(x=>{
+    document.getElementById('tabContent'+x.toUpperCase()).style.display=x===t?'':'none';
+    document.getElementById('tab'+x.toUpperCase()).classList.toggle('active',x===t);
+  });
+  if(t==='ei') doExport();
+}
+
+// ══════════════════════════════════════════
+//  PDF Parsing
+// ══════════════════════════════════════════
+function parseDE(s){ return parseFloat(String(s).replace(/\./g,'').replace(',','.')); }
+
+function parsePdfText(text, type){
+  const result = {};
+  const t = text;
+  // Helper to extract first match
+  const extract = (re) => {
+    const m = t.match(re);
+    return m ? parseDE(m[1]) : null;
+  };
+  if(type==='vs'){
+    result.zinssatz = extract(/zinssatz[:\s]+(\d+[,\.]\d+)/i);
+    result.hypo     = extract(/(?:annuit[äa]t|hypo[- ]?rate|monatsrate)[:\s€]*(\d[\d.,]+)/i);
+    result.zuschuss = extract(/zuschuss[:\s€]*(\d[\d.,]+)/i);
+    result.bk       = extract(/betriebskosten[:\s€]*(\d[\d.,]+)/i);
+    result.vk       = extract(/verwaltungskosten[:\s€]*(\d[\d.,]+)/i);
+    result.rl       = extract(/r[uü]cklage[:\s€]*(\d[\d.,]+)/i);
+    result.hk       = extract(/heiz(?:kosten|ung)[:\s€]*(\d[\d.,]+)/i);
+    // try to find date
+    const dm = t.match(/g[uü]ltig\s+ab\s+(\w+\s+\d{4}|\w+\s+'\d{2})/i);
+    if(dm) result.label = dm[1];
+  } else {
+    result.restkapital = extract(/restkapital[:\s€]*(\d[\d.,]+)/i);
+    result.tilgung     = extract(/(?:^|\s)tilgung[:\s€]*(\d[\d.,]+)/im);
+    result.sonder      = extract(/sondertilgung[:\s€]*(\d[\d.,]+)/i)||0;
+    const dm = t.match(/(?:stand|datum|abrechnung)\s+(?:per|vom|zum)?\s*(\w+\s+\d{4})/i);
+    if(dm) result.label = dm[1];
+  }
+  return result;
+}
+
+async function handlePdfUpload(event, type){
+  const file = event.target.files[0];
+  if(!file) return;
+  const statusId = type==='vs'?'pdfVSStatus':'pdfKDStatus';
+  const parseId  = type==='vs'?'parseStatusVS':'parseStatusKD';
+  document.getElementById(statusId).textContent = 'Lese PDF…';
+  document.getElementById(parseId).className = 'parse-status';
+
+  try {
+    if(typeof pdfjsLib === 'undefined') throw new Error('PDF.js nicht geladen');
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data:ab}).promise;
+    let fullText = '';
+    for(let p=1; p<=pdf.numPages; p++){
+      const page  = await pdf.getPage(p);
+      const tc    = await page.getTextContent();
+      fullText   += tc.items.map(i=>i.str).join(' ') + '\n';
+    }
+    document.getElementById(statusId).textContent = '✓ '+file.name;
+    const parsed = parsePdfText(fullText, type);
+    const found  = Object.values(parsed).filter(v=>v!==null&&v!==undefined).length;
+    if(found===0){
+      document.getElementById(parseId).className='parse-status warn';
+      document.getElementById(parseId).textContent='Keine Felder automatisch erkannt – bitte manuell eingeben.';
+    } else {
+      document.getElementById(parseId).className='parse-status ok';
+      document.getElementById(parseId).textContent=found+' Feld(er) automatisch erkannt. Bitte prüfen.';
+      fillForm(parsed, type);
+    }
+  } catch(e){
+    document.getElementById(statusId).textContent = '⚠ Fehler';
+    document.getElementById(parseId).className='parse-status err';
+    document.getElementById(parseId).textContent='PDF-Fehler: '+e.message;
+  }
+}
+
+function fillForm(parsed, type){
+  if(type==='vs'){
+    const f=(id,v)=>{if(v!==null&&v!==undefined){const el=document.getElementById(id);if(el)el.value=v;}};
+    if(parsed.label)   document.getElementById('vs_label').value=parsed.label;
+    f('vs_zinssatz',parsed.zinssatz);
+    f('vs_hypo',    parsed.hypo);
+    f('vs_zuschuss',parsed.zuschuss);
+    f('vs_bk',      parsed.bk);
+    f('vs_vk',      parsed.vk);
+    f('vs_rl',      parsed.rl);
+    f('vs_hk',      parsed.hk);
+  } else {
+    if(parsed.label)         document.getElementById('kd_label').value=parsed.label;
+    if(parsed.restkapital)   document.getElementById('kd_restkapital').value=parsed.restkapital;
+    if(parsed.tilgung)       document.getElementById('kd_tilgung').value=parsed.tilgung;
+    if(parsed.sonder)        document.getElementById('kd_sonder').value=parsed.sonder;
+  }
+}
+
+// ══════════════════════════════════════════
+//  Save & Render
+// ══════════════════════════════════════════
+function getNum(id){ return parseFloat(document.getElementById(id).value)||0; }
+function getStr(id){ return document.getElementById(id).value.trim(); }
+
+function saveVS(){
+  const label = getStr('vs_label');
+  if(!label){ alert('Bitte "Gültig ab" eingeben.'); return; }
+  const entry = {
+    label, _stored:true,
+    zinssatz: getNum('vs_zinssatz'),
+    hypo:     getNum('vs_hypo'),
+    zuschuss: getNum('vs_zuschuss'),
+    bk:       getNum('vs_bk'),
+    vk:       getNum('vs_vk'),
+    rl:       getNum('vs_rl'),
+    hk:       getNum('vs_hk'),
+    gesamt:   getNum('vs_gesamt'),
+  };
+  const d = loadStored();
+  d.vs.push(entry);
+  saveStored(d);
+  location.reload();
+}
+
+function saveKD(){
+  const label = getStr('kd_label');
+  if(!label){ alert('Bitte Datum eingeben.'); return; }
+  const entry = {
+    label, _stored:true,
+    restkapital: getNum('kd_restkapital'),
+    tilgung:     getNum('kd_tilgung')||null,
+    sonder:      getNum('kd_sonder'),
+  };
+  const d = loadStored();
+  d.kd.push(entry);
+  saveStored(d);
+  location.reload();
+}
+
+function deleteStoredVS(i){
+  const d=loadStored(); d.vs.splice(i,1); saveStored(d); renderStoredLists();
+  location.reload();
+}
+function deleteStoredKD(i){
+  const d=loadStored(); d.kd.splice(i,1); saveStored(d); location.reload();
+}
+
+function resetAll(){
+  if(!confirm('Alle manuell hinzugefügten Daten wirklich löschen?')) return;
+  localStorage.removeItem('darlehen_v1');
+  location.reload();
+}
+
+function renderStoredLists(){
+  const d = loadStored();
+  const vsList = document.getElementById('storedVSList');
+  const kdList = document.getElementById('storedKDList');
+  if(!d.vs.length){
+    vsList.innerHTML='<p style="font-size:.74rem;color:var(--muted)">Keine gespeicherten Einträge.</p>';
+  } else {
+    vsList.innerHTML = d.vs.map((r,i)=>`
+      <div class="stored-item">
+        <div><div class="si-label">${r.label}</div><div class="si-meta">${r.zinssatz.toFixed(3)}% · Gesamt €${r.gesamt}</div></div>
+        <button class="btn-del" onclick="deleteStoredVS(${i})" title="Löschen">&#x2715;</button>
+      </div>`).join('');
+  }
+  if(!d.kd.length){
+    kdList.innerHTML='<p style="font-size:.74rem;color:var(--muted)">Keine gespeicherten Einträge.</p>';
+  } else {
+    kdList.innerHTML = d.kd.map((r,i)=>`
+      <div class="stored-item">
+        <div><div class="si-label">${r.label}</div><div class="si-meta">Restkapital €${r.restkapital}</div></div>
+        <button class="btn-del" onclick="deleteStoredKD(${i})" title="Löschen">&#x2715;</button>
+      </div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════
+//  Export / Import
+// ══════════════════════════════════════════
+function doExport(){
+  const d = loadStored();
+  document.getElementById('exportArea').value = JSON.stringify(d, null, 2);
+}
+function copyExport(){
+  const ta = document.getElementById('exportArea');
+  ta.select();
+  document.execCommand('copy');
+  alert('Kopiert!');
+}
+function doImport(){
+  const raw = document.getElementById('importArea').value.trim();
+  const st  = document.getElementById('importStatus');
+  try {
+    const incoming = JSON.parse(raw);
+    if(!incoming.vs||!incoming.kd) throw new Error('Ungültiges Format – vs und kd erwartet');
+    const existing = loadStored();
+    existing.vs.push(...incoming.vs);
+    existing.kd.push(...incoming.kd);
+    saveStored(existing);
+    st.className='parse-status ok';
+    st.textContent='✓ '+incoming.vs.length+' VS + '+incoming.kd.length+' KD importiert.';
+    setTimeout(()=>location.reload(),800);
+  } catch(e){
+    st.className='parse-status err';
+    st.textContent='Fehler: '+e.message;
+  }
+}
+
+// ══════════════════════════════════════════
+//  Active nav on scroll
+// ══════════════════════════════════════════
+(function(){
+  const sections=['sec-darlehen','sec-zinsen','sec-zinskosten','sec-kosten','sec-tabellen','sec-kd'];
+  const links = [...document.querySelectorAll('.nav-links a')];
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        const id=e.target.id;
+        links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+id));
+      }
+    });
+  },{rootMargin:'-30% 0px -60% 0px'});
+  sections.forEach(id=>{const el=document.getElementById(id);if(el)obs.observe(el);});
+})();
 </script>
 </body>
 </html>
